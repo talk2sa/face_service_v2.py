@@ -5,5 +5,5 @@ opencv-python-headless
 pillow
 requests
 numpy
-tf-keras
+tensorflow==2.12.0
 
