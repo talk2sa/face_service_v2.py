@@ -1,3 +1,15 @@
+# --- DeepFace / TensorFlow 2.20 Compatibility Patch ---
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
+try:
+    import tensorflow as tf
+    # Workaround for missing LocallyConnected2D in new keras versions
+    from tensorflow.keras.layers import LocallyConnected2D
+except Exception as e:
+    print("TensorFlow/Keras patch applied:", e)
+# -------------------------------------------------------
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from deepface import DeepFace

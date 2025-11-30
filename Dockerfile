@@ -21,12 +21,12 @@ RUN pip install --no-cache-dir --upgrade pip \
     fastapi \
     uvicorn[standard] \
     deepface==0.0.79 \
-    tensorflow-cpu==2.12.0 \
+    tensorflow-cpu==2.20.0 \
     opencv-python-headless \
     pillow \
     requests \
-    numpy
-
+    numpy \
+    tf-keras
 # ────────────── Expose & Run ──────────────
 EXPOSE 8000
 CMD ["uvicorn", "face_service_v2:app", "--host", "0.0.0.0", "--port", "8000"]
