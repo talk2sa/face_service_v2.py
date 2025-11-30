@@ -1,24 +1,32 @@
-# ────────────── Base image ──────────────
+# ────────────── Base Image ──────────────
 FROM python:3.10-slim
 
-# Prevent interactive tzdata setup
+# Avoid tzdata prompts during apt install
 ENV DEBIAN_FRONTEND=noninteractive
 
-# ────────────── System dependencies ──────────────
-RUN apt-get update && apt-get install -y \
+# ────────────── Install system dependencies ──────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# ────────────── Copy project ──────────────
+# ────────────── Working directory ──────────────
 WORKDIR /app
 COPY . /app
 
-# ────────────── Install Python packages ──────────────
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# ────────────── Python deps ──────────────
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    deepface==0.0.79 \
+    tensorflow-cpu==2.12.0 \
+    opencv-python-headless \
+    pillow \
+    requests \
+    numpy
 
-# ────────────── Expose & run ──────────────
+# ────────────── Expose & Run ──────────────
 EXPOSE 8000
 CMD ["uvicorn", "face_service_v2:app", "--host", "0.0.0.0", "--port", "8000"]
