@@ -8,6 +8,10 @@ def face_onboard(
     payload: OnboardRequest,
     authorization: Optional[str] = Header(None)
 ):
+    print("✅ Received payload:", payload)
+    print("✅ Selfie URLs:", payload.selfie_urls)
+    print("✅ ID URL:", payload.id_url)
+
     if authorization != f"Bearer {API_SECRET}":
         raise HTTPException(status_code=401, detail="Unauthorized")
     ...
