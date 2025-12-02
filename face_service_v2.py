@@ -1,70 +1,54 @@
-import os
-from fastapi import FastAPI, Header, HTTPException
-from typing import Optional
+# ================================================================
+# Fundra Unified Face Verification API (v2.0.0)
+# ================================================================
 
-API_SECRET = os.getenv("API_SECRET", "")
-
-from fastapi import Header, HTTPException
-from typing import Optional
-
-API_SECRET = os.getenv("API_SECRET", "")
-
-@app.post("/face/onboard")
-def face_onboard(
-    payload: OnboardRequest,
-    authorization: Optional[str] = Header(None)
-):
-    print("✅ Received payload:", payload)
-    print("✅ Selfie URLs:", payload.selfie_urls)
-    print("✅ ID URL:", payload.id_url)
-
-    if authorization != f"Bearer {API_SECRET}":
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    ...
-
-
-# --- DeepFace / TensorFlow 2.20 Compatibility Patch ---
+# --- Environment & imports ---
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
-try:
-    import tensorflow as tf
-    # Workaround for missing LocallyConnected2D in new keras versions
-    from tensorflow.keras.layers import LocallyConnected2D
-except Exception as e:
-    print("TensorFlow/Keras patch applied:", e)
-# -------------------------------------------------------
-
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
+from typing import Optional
 from pydantic import BaseModel
 from deepface import DeepFace
 from PIL import Image
 import requests, io, numpy as np, cv2
+import tensorflow as tf
 
+# --- App setup ---
 app = FastAPI(title="Fundra Unified Face Verification", version="2.0.0")
 
+API_SECRET = os.getenv("API_SECRET", "")
+
+
+# --- Request models ---
 class OnboardRequest(BaseModel):
     selfie_urls: list[str]  # 3 frames
     id_url: str
+
 
 class VerifyRequest(BaseModel):
     selfie_urls: list[str]  # 3 frames
     stored_face_url: str
 
+
+# --- Utility functions ---
 def fetch_image(url: str) -> np.ndarray:
     resp = requests.get(url, timeout=10)
     img = Image.open(io.BytesIO(resp.content)).convert("RGB")
     return np.array(img)
+
 
 def brightness_score(image: np.ndarray) -> float:
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     mean = np.mean(gray)
     return np.clip((mean / 255.0) * 100, 0, 100)
 
+
 def clarity_score(image: np.ndarray) -> float:
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     lap_var = cv2.Laplacian(gray, cv2.CV_64F).var()
     return np.clip((lap_var / 300.0) * 100, 0, 100)
+
 
 def liveness_score(frames: list[np.ndarray]) -> float:
     variances = []
@@ -73,6 +57,7 @@ def liveness_score(frames: list[np.ndarray]) -> float:
         variances.append(diff)
     score = np.mean(variances)
     return np.clip((score / 15.0) * 100, 0, 100)
+
 
 def dual_model_similarity(img1, img2) -> float:
     try:
@@ -90,9 +75,24 @@ def dual_model_similarity(img1, img2) -> float:
         print("Error in dual_model_similarity:", e)
         return 0.0
 
+
+# ================================================================
+#  ROUTES
+# ================================================================
+
 @app.post("/face/onboard")
-def face_onboard(payload: OnboardRequest):
+def face_onboard(
+    payload: OnboardRequest,
+    authorization: Optional[str] = Header(None)
+):
+    # --- Auth Check ---
+    if authorization != f"Bearer {API_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     try:
+        print("✅ Received payload:", payload)
+
+        # Fetch and process images
         frames = [fetch_image(url) for url in payload.selfie_urls]
         idimg = fetch_image(payload.id_url)
 
@@ -119,10 +119,18 @@ def face_onboard(payload: OnboardRequest):
 
     except Exception as e:
         print("Onboarding Error:", e)
-        return {"error": str(e), "total": 0}
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/face/verify")
-def face_verify(payload: VerifyRequest):
+def face_verify(
+    payload: VerifyRequest,
+    authorization: Optional[str] = Header(None)
+):
+    # --- Auth Check ---
+    if authorization != f"Bearer {API_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     try:
         frames = [fetch_image(url) for url in payload.selfie_urls]
         stored_face = fetch_image(payload.stored_face_url)
@@ -150,4 +158,4 @@ def face_verify(payload: VerifyRequest):
 
     except Exception as e:
         print("Verification Error:", e)
-        return {"error": str(e), "total": 0}
+        raise HTTPException(status_code=500, detail=str(e))
