@@ -1,3 +1,9 @@
+import os
+from fastapi import FastAPI, Header, HTTPException
+from typing import Optional
+
+API_SECRET = os.getenv("API_SECRET", "")
+
 from fastapi import Header, HTTPException
 from typing import Optional
 
