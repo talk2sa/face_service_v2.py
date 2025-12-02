@@ -1,3 +1,18 @@
+from fastapi import Header, HTTPException
+from typing import Optional
+
+API_SECRET = os.getenv("API_SECRET", "")
+
+@app.post("/face/onboard")
+def face_onboard(
+    payload: OnboardRequest,
+    authorization: Optional[str] = Header(None)
+):
+    if authorization != f"Bearer {API_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    ...
+
+
 # --- DeepFace / TensorFlow 2.20 Compatibility Patch ---
 import os
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
